@@ -34,4 +34,14 @@ To create a single worker, run the command
 go run mrworker.go
 ```
 
+## Output
+The output files will be in the main project directory with the following format
+
+```
+mr-out-*
+```
+
+where * is the number of the reduce job, starting from 0
+
+
 Remeber, you can run this on as many workers as you'd want! Have fun!
