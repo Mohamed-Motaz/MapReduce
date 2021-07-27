@@ -22,7 +22,7 @@ To run the MapReduce, just type the following command after you cd into src/main
 TestTextFiles folder should contain all the .txt files that you wish to run the MapReduce job on
 
 ```
-go run -race 5 mrcoordinator.go TestTextFiles/pg-*.txt
+go run -race mrcoordinator.go 5 TestTextFiles/pg-*.txt
 ```
 
 This creates one coordinator (master). Please avoid creating more than one master at a time
