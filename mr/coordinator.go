@@ -1,6 +1,7 @@
 package mr
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 type Coordinator struct {
 
 	mu sync.Mutex
+	cond *sync.Cond
 
 	NumReduceTasks int
 	MapFiles []string
@@ -49,8 +51,8 @@ func (c *Coordinator) HandleGetTasks(args *GetTaskArgs, reply *GetTaskReply) err
 					reply.FileName = c.MapFiles[m];
 					reply.TaskType = Map;
 					reply.TaskNum = m;
-					reply.Done = false;
 					c.MapTasksIssued[m] = time.Now()
+					return nil; //succesful task given
 				}else{   //there is a woker who is currently working on a map task
 					mapPhaseDone = false
 				}
@@ -58,12 +60,14 @@ func (c *Coordinator) HandleGetTasks(args *GetTaskArgs, reply *GetTaskReply) err
 		}
 		if !mapPhaseDone{
 			//wait
+			c.cond.Wait()
 		}else{
 			break
 		}
 	}//All map tasks are done
 
 	//Issure all reduce tasks
+	//fmt.Println("About to start reduce tasks")
 	for {
 		reducePhaseDone := true;
 		for m, done := range c.ReduceTasksFinished{
@@ -74,8 +78,8 @@ func (c *Coordinator) HandleGetTasks(args *GetTaskArgs, reply *GetTaskReply) err
 					time.Since(c.ReduceTasksIssued[m]).Seconds() > 10 {
 					reply.TaskType = Reduce;
 					reply.TaskNum = m;
-					reply.Done = false;
 					c.ReduceTasksIssued[m] = time.Now()
+					return nil;
 				}else{   //there is a woker who is currently working on a map task
 					reducePhaseDone = false
 				}
@@ -83,11 +87,14 @@ func (c *Coordinator) HandleGetTasks(args *GetTaskArgs, reply *GetTaskReply) err
 		}
 		if !reducePhaseDone{
 			//wait
+			c.cond.Wait()
 		}else{
 			break
 		}
 	}//All reduce tasks are done
-	reply.Done = true;
+	reply.TaskType = Done;
+	c.isDone = true;
+
 	return nil;
 }
 
@@ -103,6 +110,8 @@ func (c *Coordinator) HandleFinishTasks(args *FinishedTaskArgs, reply *FinishedT
 	default:
 		log.Fatalf("bad task type %v", args.TaskType);
 	}
+	//wake up task handler and notify him that the task is finished
+	c.cond.Broadcast()
 	return nil;
 }
 
@@ -127,7 +136,12 @@ func (c *Coordinator) server() {
 // if the entire job has finished.
 //
 func (c *Coordinator) Done() bool {
-	
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.isDone{
+		//remove all intermediate files
+		c.removeAllIntermediateFiles()
+	}
 	return c.isDone
 }
 
@@ -138,6 +152,9 @@ func (c *Coordinator) Done() bool {
 //
 func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	c := Coordinator{}
+
+	c.cond = sync.NewCond(&c.mu)
+	//fmt.Println("These are the files", files)
 	c.NumReduceTasks = nReduce;
 	c.MapFiles = files;
 	
@@ -147,6 +164,28 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	c.ReduceTasksFinished = make([]bool, nReduce)
 	c.ReduceTasksIssued = make([]time.Time, nReduce)
 
+	//wake up task handler thread every second
+	go func(){
+		for {
+			c.mu.Lock()
+			c.cond.Broadcast()
+			c.mu.Unlock()
+			time.Sleep(time.Second)
+		}
+	}()
+
 	c.server()
 	return &c
+}
+
+func (c *Coordinator) removeAllIntermediateFiles(){
+	for m := 0; m < len(c.MapFiles); m++{
+		for r := 0; r < c.NumReduceTasks; r++{
+			fileName := fmt.Sprintf("mr-%d-%d", m, r);
+			err := os.Remove(fileName)
+			if err != nil{
+				log.Fatal(err)
+			}
+		}
+	}
 }

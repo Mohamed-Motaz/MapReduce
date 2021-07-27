@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	Map = 1
-	Reduce = 2
-	Done = 3
+	Map TaskType = 1
+	Reduce TaskType= 2
+	Done TaskType= 3
 )
 
 type KeyValue struct{
@@ -41,8 +41,7 @@ type GetTaskReply struct{
 	//Number of map tasks, for the reduce 
 	NumMapTasks int
 	
-	//When true, the worker exits as there are no more tasks to be given
-	Done bool
+
 }
 
 type FinishedTaskArgs struct{

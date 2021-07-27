@@ -9,7 +9,9 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/mohamed247/mapReduce/mr"
@@ -21,7 +23,11 @@ func main() {
 		os.Exit(1)
 	}
 	//fmt.Println("Coordinator is running.....")
-	m := mr.MakeCoordinator(os.Args[1:], 10)
+	reduceTasksNum, err := strconv.Atoi(os.Args[1]);
+	if err != nil {
+        log.Fatal("Reduce tasks to run needs to be an integer")
+    }
+	m := mr.MakeCoordinator(os.Args[2:], reduceTasksNum)
 	for m.Done() == false {
 		time.Sleep(time.Second)
 	}
