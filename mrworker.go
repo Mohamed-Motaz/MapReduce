@@ -8,9 +8,10 @@ package main
 // go run mrworker.go wc.so
 
 import (
+	functionality "github.com/mohamed247/mapReduce/Functionality"
 	"github.com/mohamed247/mapReduce/mr"
 )
 
 func main() {
-	mr.Worker(Map, Reduce)
+	mr.Worker(functionality.Map, functionality.Reduce)
 }

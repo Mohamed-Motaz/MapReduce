@@ -17,7 +17,6 @@ type Coordinator struct {
 //RPC handlers for the worker to call.
 
 
-
 //
 // start a thread that listens for RPCs from worker.go
 //
