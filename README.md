@@ -27,7 +27,7 @@ go run -race mrcoordinator.go 5 TestTextFiles/pg-*.txt
 
 This creates one coordinator (master). Please avoid creating more than one master at a time
 
-To alter the number of reduce tasks, just change the number after "-race" in the above command to the number you'd like
+To alter the number of reduce tasks, just change the number after "mrcoordinator.go" in the above command to the number you'd like
 
 To create a single worker, run the command
 ```
